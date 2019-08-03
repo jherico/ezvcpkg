@@ -17,9 +17,9 @@ for future builds, even if you wipe out the build directory and start from scrat
 ### Simple 
 
 In this mode it's up to the CMake developer to use the find the libraries and binaries they need 
-relative to the ${EZVCPKG_DIR}
+relative to `EZVCPKG_DIR`
 
-```
+```CMake
 cmake_minimum_required(VERSION 3.10)
 
 include(${CMAKE_SOURCE_DIR}/ezvcpkg.cmake)
@@ -44,10 +44,10 @@ target_link_libraries(MyTarget PRIVATE ${IMGUI_LIB})
 
 If you want to use the built-in find_package functionality with vcpkg packages that support it
 you MUST call `EZVCPKG_FETCH` before the `PROJECT` directive, and you must include the `UPDATE_TOOLCHAIN` 
-parameter, which will then populate the CMAKE_TOOLCHAIN_FILE value before `EZVCPKG_FETCH` returns
+parameter, which will then populate `CMAKE_TOOLCHAIN_FILE` value before `EZVCPKG_FETCH` returns
 
 
-```
+```CMake
 cmake_minimum_required(VERSION 3.10)
 
 include(${CMAKE_SOURCE_DIR}/ezvcpkg.cmake)
