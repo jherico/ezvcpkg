@@ -99,7 +99,6 @@ macro(EZVCPKG_BUILD)
     )
 
     file(TO_CMAKE_PATH ${VCPKG_DIR}/buildtrees VCPKG_BUILDTREES)
-    message(STATUS ${VCPKG_BUILDTREES})
     if (EXISTS ${VCPKG_BUILDTREES})
         file(REMOVE_RECURSE "${VCPKG_DIR}/buildtrees")
     endif()
