@@ -35,15 +35,25 @@ macro(EZVCPKG_CALCULATE_PATHS)
                 # home directory instead
                 set(EZVCPKG_BASEDIR "$ENV{HOME}/.ezvcpkg")
             else()
-                set(EZVCPKG_BASEDIR "$ENV{TEMP}/ezvcpkg")
+                # Initially defaulted to $ENV{TEMP} but the github build hosts don't populate this
+                set(EZVCPKG_BASEDIR "$ENV{HOME}/.ezvcpkg")
             endif()
             # We want people to specify a base directory, either through the calling EZVCPKG_FETCH 
             # function or through an environment variable.  
-            message(WARNING "EZVCPKG_BASEDIR envrionment variable not found and basedir not set, using default ${EZVCPKG_BASEDIR}")
+            message(STATUS "EZVCPKG_BASEDIR envrionment variable not found and basedir not set, using default ${EZVCPKG_BASEDIR}")
         endif()
     endif()
     file(TO_CMAKE_PATH "${EZVCPKG_BASEDIR}/${EZVCPKG_COMMIT}" EZVCPKG_DIR)
     file(TO_CMAKE_PATH "${EZVCPKG_BASEDIR}/${EZVCPKG_COMMIT}.lock" EZVCPKG_LOCK)
+
+    if (EZVCPKG_USE_HOST_VCPKG)
+        find_program(EZVCPKG_HOST_VCPKG vcpkg)
+        if (EZVCPKG_HOST_VCPKG)
+            message(STATUS "EZVCPKG using host vcpkg binary ${EZVCPKG_HOST_VCPKG}")
+        endif()
+    endif()
+
+
     if (WIN32)
         file(TO_CMAKE_PATH "${EZVCPKG_DIR}/vcpkg.exe" EZVCPKG_EXE)
         file(TO_CMAKE_PATH "${EZVCPKG_DIR}/bootstrap-vcpkg.bat" EZVCPKG_BOOTSTRAP)
@@ -55,6 +65,7 @@ macro(EZVCPKG_CALCULATE_PATHS)
     # The tag file exists purely to be a touch target every time the ezvcpkg macro is called
     # making it easy to find out of date ezvcpkg folder.  
     file(TO_CMAKE_PATH "${EZVCPKG_DIR}/.tag" EZVCPKG_TAG)
+    file(TO_CMAKE_PATH "${EZVCPKG_DIR}/README.md" EZVCPKG_README)
 
     # The whole host-triplet / triplet setup is to support cross compiling, specifically for things 
     # like android.  The idea is that some things you might need from vcpkg to act as tools to execute 
@@ -80,7 +91,7 @@ macro(EZVCPKG_CALCULATE_PATHS)
 endmacro()
 
 macro(EZVCPKG_BOOTSTRAP)
-    if (NOT EXISTS ${EZVCPKG_EXE})
+    if (NOT EXISTS ${EZVCPKG_README})
         message(STATUS "EZVCPKG Bootstrapping")
         find_package(Git)
         if (NOT Git_FOUND)
@@ -89,29 +100,51 @@ macro(EZVCPKG_BOOTSTRAP)
         message(STATUS "EZVCPKG Cloning repository")
         execute_process(
             COMMAND ${GIT_EXECUTABLE} "clone" ${EZVCPKG_URL} ${EZVCPKG_DIR}
-            QUIET_OUTPUT)
+            OUTPUT_QUIET)
 
+        # FIXME put this into a separate check verifying the commit ID of the current directory
+        # If the previous run had the clone work, but the checkout fail, the readme will be 
+        # present and the user will have the default checkout, rather than their requested commit
         message(STATUS "EZVCPKG Checking out commit ${EZVCPKG_COMMIT}")
         execute_process(
             COMMAND ${GIT_EXECUTABLE} "checkout" ${EZVCPKG_COMMIT}
             WORKING_DIRECTORY ${EZVCPKG_DIR}
-            QUIET_OUTPUT)
+            OUTPUT_QUIET)
+    endif()
 
+    if (EZVCPKG_HOST_VCPKG)
+        set(EZVCPKG_EXE ${EZVCPKG_HOST_VCPKG})
+    elseif(NOT EXISTS ${EZVCPKG_EXE})
         message(STATUS "EZVCPKG Bootstrapping vcpkg binary")
         execute_process(
             COMMAND ${EZVCPKG_BOOTSTRAP}
             WORKING_DIRECTORY ${EZVCPKG_DIR}
-            QUIET_OUTPUT)
+            OUTPUT_QUIET)
+    endif()
+
+    if (NOT EXISTS ${EZVCPKG_EXE})
+        message(FATAL_ERROR "EZVCPKG vcpkg binary not failed")
     endif()
 endmacro()
 
 macro(EZVCPKG_BUILD)
-    message(STATUS "EZVCPKG Building/Verifying packages ${EZVCPKG_PACKAGES}")
-    execute_process(
-        COMMAND ${EZVCPKG_EXE} --vcpkg-root ${EZVCPKG_DIR} install --triplet ${EZVCPKG_TRIPLET} ${EZVCPKG_PACKAGES}
-        WORKING_DIRECTORY ${EZVCPKG_DIR}
-        OUTPUT_QUIET
-    )
+    if (EZVCPKG_SERIALIZE)
+        foreach(_PACKAGE ${EZVCPKG_PACKAGES})
+            message(STATUS "EZVCPKG Building/Verifying package ${_PACKAGE}")
+            execute_process(
+                COMMAND ${EZVCPKG_EXE} --vcpkg-root ${EZVCPKG_DIR} install --triplet ${EZVCPKG_TRIPLET} ${_PACKAGE}
+                WORKING_DIRECTORY ${EZVCPKG_DIR}
+                OUTPUT_QUIET
+            )
+        endforeach()
+    else()
+        message(STATUS "EZVCPKG Building/Verifying packages ${EZVCPKG_PACKAGES}")
+        execute_process(
+            COMMAND ${EZVCPKG_EXE} --vcpkg-root ${EZVCPKG_DIR} install --triplet ${EZVCPKG_TRIPLET} ${EZVCPKG_PACKAGES}
+            WORKING_DIRECTORY ${EZVCPKG_DIR}
+            OUTPUT_QUIET
+        )
+endif()
 
     file(TO_CMAKE_PATH ${EZVCPKG_DIR}/buildtrees EZVCPKG_BUILDTREES)
     if (EXISTS ${EZVCPKG_BUILDTREES})
@@ -155,8 +188,9 @@ function(EZVCPKG_FETCH)
         message(STATUS "EZVCPKG v${EZVCPKG_VERSION} starting up\n\tWebsite: https://github.com/jherico/ezvcpkg")
     endif()
 
+    message(STATUS "TEMP $ENV{TEMP} TEMP $ENV{TMP} HOME $ENV{HOME}")
 
-    set(options UPDATE_TOOLCHAIN)
+    set(options UPDATE_TOOLCHAIN SERIALIZE USE_HOST_VCPKG)
     set(oneValueArgs COMMIT URL REPO BASEDIR OUTPUT CLEAN)
     set(multiValueArgs PACKAGES)
     cmake_parse_arguments(EZVCPKG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
@@ -198,4 +232,5 @@ function(EZVCPKG_FETCH)
     if (EZVCPKG_UPDATE_TOOLCHAIN)
         set(CMAKE_TOOLCHAIN_FILE ${EZVCPKG_CMAKE_TOOLCHAIN} PARENT_SCOPE)
     endif()
+    message(STATUS "EZVCPKG done")
 endfunction()
