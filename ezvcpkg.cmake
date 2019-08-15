@@ -22,6 +22,7 @@
 # Output:
 # If successful the function will populate EZVCPKG_DIR with the location of the installed triplet, for instance 
 # D:\ezvcpkg\f990dfaa5ba82155f95b75021453c075816fd4be\installed\x64-windows
+set(EZVCPKG_VERSION 0.1)
 
 macro(EZVCPKG_CALCULATE_PATHS)
     if (NOT EZVCPKG_BASEDIR)
@@ -151,7 +152,7 @@ endmacro()
 function(EZVCPKG_FETCH)
     if (NOT EZVCPKG_ANNOUNCED)
         set(EZVCPKG_ANNOUNCED 1 PARENT_SCOPE)
-        message(STATUS "EZVCPKG v0.1 starting up\n\tAuthor: Bradley Austin Davis\n\tWebsite: https://github.com/jherico/ezvcpkg")
+        message(STATUS "EZVCPKG v${EZVCPKG_VERSION} starting up\n\tWebsite: https://github.com/jherico/ezvcpkg")
     endif()
 
 
