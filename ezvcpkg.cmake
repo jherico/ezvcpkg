@@ -1,6 +1,9 @@
 #
-# A CMake function for installing VCPKG dependencies
+# EZVCPKG: A CMake function for installing VCPKG dependencies
 #
+# Created by Bradley Austin Davis on 2019/07/28
+# Website:  https://github.com/jherico/ezvcpkg
+# 
 
 # Arguments: 
 
@@ -21,36 +24,36 @@
 # D:\ezvcpkg\f990dfaa5ba82155f95b75021453c075816fd4be\installed\x64-windows
 
 macro(EZVCPKG_CALCULATE_PATHS)
-    if (NOT VCPKG_BASEDIR)
+    if (NOT EZVCPKG_BASEDIR)
         if (DEFINED ENV{EZVCPKG_BASEDIR})
-            set(VCPKG_BASEDIR $ENV{EZVCPKG_BASEDIR})
+            set(EZVCPKG_BASEDIR $ENV{EZVCPKG_BASEDIR})
         else() 
             if(APPLE)
                 # OSX wipes binaries from the temp directory over time, leaving the remaining files
                 # This causes the vcpkg folder to end up in an unusable state, so we default to the 
                 # home directory instead
-                set(VCPKG_BASEDIR "$ENV{HOME}/.ezvcpkg")
+                set(EZVCPKG_BASEDIR "$ENV{HOME}/.ezvcpkg")
             else()
-                set(VCPKG_BASEDIR "$ENV{TEMP}/ezvcpkg")
+                set(EZVCPKG_BASEDIR "$ENV{TEMP}/ezvcpkg")
             endif()
             # We want people to specify a base directory, either through the calling EZVCPKG_FETCH 
             # function or through an environment variable.  
-            message(WARNING "EZVCPKG_BASEDIR envrionment variable not found and basedir not set, using default ${VCPKG_BASEDIR}")
+            message(WARNING "EZVCPKG_BASEDIR envrionment variable not found and basedir not set, using default ${EZVCPKG_BASEDIR}")
         endif()
     endif()
-    file(TO_CMAKE_PATH "${VCPKG_BASEDIR}/${VCPKG_COMMIT}" VCPKG_DIR)
-    file(TO_CMAKE_PATH "${VCPKG_BASEDIR}/${VCPKG_COMMIT}.lock" VCPKG_LOCK)
+    file(TO_CMAKE_PATH "${EZVCPKG_BASEDIR}/${EZVCPKG_COMMIT}" EZVCPKG_DIR)
+    file(TO_CMAKE_PATH "${EZVCPKG_BASEDIR}/${EZVCPKG_COMMIT}.lock" EZVCPKG_LOCK)
     if (WIN32)
-        file(TO_CMAKE_PATH "${VCPKG_DIR}/vcpkg.exe" VCPKG_EXE)
-        file(TO_CMAKE_PATH "${VCPKG_DIR}/bootstrap-vcpkg.bat" VCPKG_BOOTSTRAP)
+        file(TO_CMAKE_PATH "${EZVCPKG_DIR}/vcpkg.exe" EZVCPKG_EXE)
+        file(TO_CMAKE_PATH "${EZVCPKG_DIR}/bootstrap-vcpkg.bat" EZVCPKG_BOOTSTRAP)
     else()
-        file(TO_CMAKE_PATH "${VCPKG_DIR}/vcpkg" VCPKG_EXE)
-        file(TO_CMAKE_PATH "${VCPKG_DIR}/bootstrap-vcpkg.sh" VCPKG_BOOTSTRAP)
+        file(TO_CMAKE_PATH "${EZVCPKG_DIR}/vcpkg" EZVCPKG_EXE)
+        file(TO_CMAKE_PATH "${EZVCPKG_DIR}/bootstrap-vcpkg.sh" EZVCPKG_BOOTSTRAP)
     endif()
 
     # The tag file exists purely to be a touch target every time the ezvcpkg macro is called
     # making it easy to find out of date ezvcpkg folder.  
-    file(TO_CMAKE_PATH "${VCPKG_DIR}/.tag" VCPKG_TAG)
+    file(TO_CMAKE_PATH "${EZVCPKG_DIR}/.tag" EZVCPKG_TAG)
 
     # The whole host-triplet / triplet setup is to support cross compiling, specifically for things 
     # like android.  The idea is that some things you might need from vcpkg to act as tools to execute 
@@ -58,87 +61,104 @@ macro(EZVCPKG_CALCULATE_PATHS)
     # compatible with the target system.  However, this isn't fully fleshed out, so don't try to use 
     # it yet
     if (WIN32)
-        set(VCPKG_HOST_TRIPLET "x64-windows")
+        set(EZVCPKG_HOST_TRIPLET "x64-windows")
     elseif(APPLE)
-        set(VCPKG_HOST_TRIPLET "x64-osx")
+        set(EZVCPKG_HOST_TRIPLET "x64-osx")
     else() 
-        set(VCPKG_HOST_TRIPLET "x64-linux")
+        set(EZVCPKG_HOST_TRIPLET "x64-linux")
     endif()
 
     if (ANDROID)
-        set(VCPKG_TRIPLET "arm64-android")
+        set(EZVCPKG_TRIPLET "arm64-android")
     else()
-        set(VCPKG_TRIPLET ${VCPKG_HOST_TRIPLET})
+        set(EZVCPKG_TRIPLET ${EZVCPKG_HOST_TRIPLET})
     endif()
 
-    file(TO_CMAKE_PATH ${VCPKG_DIR}/installed/${VCPKG_TRIPLET} VCPKG_INSTALLED_DIR)
-    file(TO_CMAKE_PATH ${VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake VCPKG_CMAKE_TOOLCHAIN)
+    file(TO_CMAKE_PATH ${EZVCPKG_DIR}/installed/${EZVCPKG_TRIPLET} EZVCPKG_INSTALLED_DIR)
+    file(TO_CMAKE_PATH ${EZVCPKG_DIR}/scripts/buildsystems/vcpkg.cmake EZVCPKG_CMAKE_TOOLCHAIN)
 endmacro()
 
 macro(EZVCPKG_BOOTSTRAP)
-    if (NOT EXISTS ${VCPKG_EXE})
+    if (NOT EXISTS ${EZVCPKG_EXE})
+        message(STATUS "EZVCPKG Bootstrapping")
         find_package(Git)
         if (NOT Git_FOUND)
-            message(FATAL_ERROR "Git not found, can't bootstrap vcpkg")
+            message(FATAL_ERROR "EZVCPKG Git not found, can't bootstrap vcpkg")
         endif()
+        message(STATUS "EZVCPKG Cloning repository")
         execute_process(
-            COMMAND ${GIT_EXECUTABLE} "clone" ${VCPKG_URL} ${VCPKG_DIR})
+            COMMAND ${GIT_EXECUTABLE} "clone" ${EZVCPKG_URL} ${EZVCPKG_DIR}
+            QUIET_OUTPUT)
+
+        message(STATUS "EZVCPKG Checking out commit ${EZVCPKG_COMMIT}")
         execute_process(
-            COMMAND ${GIT_EXECUTABLE} "checkout" ${VCPKG_COMMIT}
-            WORKING_DIRECTORY ${VCPKG_DIR})
+            COMMAND ${GIT_EXECUTABLE} "checkout" ${EZVCPKG_COMMIT}
+            WORKING_DIRECTORY ${EZVCPKG_DIR}
+            QUIET_OUTPUT)
+
+        message(STATUS "EZVCPKG Bootstrapping vcpkg binary")
         execute_process(
-            COMMAND ${VCPKG_BOOTSTRAP}
-            WORKING_DIRECTORY ${VCPKG_DIR})
+            COMMAND ${EZVCPKG_BOOTSTRAP}
+            WORKING_DIRECTORY ${EZVCPKG_DIR}
+            QUIET_OUTPUT)
     endif()
 endmacro()
 
 macro(EZVCPKG_BUILD)
+    message(STATUS "EZVCPKG Building/Verifying packages ${EZVCPKG_PACKAGES}")
     execute_process(
-        COMMAND ${VCPKG_EXE} --vcpkg-root ${VCPKG_DIR} install --triplet ${VCPKG_TRIPLET} ${VCPKG_PACKAGES}
-        WORKING_DIRECTORY ${VCPKG_DIR}
+        COMMAND ${EZVCPKG_EXE} --vcpkg-root ${EZVCPKG_DIR} install --triplet ${EZVCPKG_TRIPLET} ${EZVCPKG_PACKAGES}
+        WORKING_DIRECTORY ${EZVCPKG_DIR}
+        OUTPUT_QUIET
     )
 
-    file(TO_CMAKE_PATH ${VCPKG_DIR}/buildtrees VCPKG_BUILDTREES)
-    if (EXISTS ${VCPKG_BUILDTREES})
-        file(REMOVE_RECURSE "${VCPKG_DIR}/buildtrees")
+    file(TO_CMAKE_PATH ${EZVCPKG_DIR}/buildtrees EZVCPKG_BUILDTREES)
+    if (EXISTS ${EZVCPKG_BUILDTREES})
+        file(REMOVE_RECURSE "${EZVCPKG_DIR}/buildtrees")
     endif()
 endmacro()
 
 macro(EZVCPKG_CLEAN)
-    message(STATUS "Cleaning unused ezvcpkg dirs after ${VCPKG_CLEAN} days")
+    message(STATUS "EZVCPKG Cleaning unused ezvcpkg dirs after ${EZVCPKG_CLEAN} days")
     message(WARNING "Cleaning not implemented")
 endmacro()
 
 macro(EZVCPKG_CHECK_ARGS)
     # Default to a recent vcpkg commit
-    if (NOT VCPKG_COMMIT)
-        set(VCPKG_COMMIT "f990dfaa5ba82155f95b75021453c075816fd4be")
+    if (NOT EZVCPKG_COMMIT)
+        set(EZVCPKG_COMMIT "f990dfaa5ba82155f95b75021453c075816fd4be")
     endif()
 
-    if (VCPKG_REPO AND VCPKG_URL)
+    if (EZVCPKG_REPO AND EZVCPKG_URL)
         message(FATAL_ERROR "Set either a Git repository URL or a REPO org/name combination, but not both")
     endif()
 
     # Default to the microsoft root vcpkg repository
-    if((NOT VCPKG_URL) AND (NOT VCPKG_REPO))
-        set(VCPKG_REPO "microsoft/vcpkg")
+    if((NOT EZVCPKG_URL) AND (NOT EZVCPKG_REPO))
+        set(EZVCPKG_REPO "microsoft/vcpkg")
     endif()
 
     # Default to github
-    if(NOT VCPKG_URL) 
-        set(VCPKG_URL "https://github.com/${VCPKG_REPO}.git")
+    if(NOT EZVCPKG_URL) 
+        set(EZVCPKG_URL "https://github.com/${EZVCPKG_REPO}.git")
     endif()
 
-    if (NOT VCPKG_PACKAGES)
+    if (NOT EZVCPKG_PACKAGES)
         message(FATAL_ERROR "No vcpkg packages specified")
     endif()
 endmacro()
 
 function(EZVCPKG_FETCH)
+    if (NOT EZVCPKG_ANNOUNCED)
+        set(EZVCPKG_ANNOUNCED 1 PARENT_SCOPE)
+        message(STATUS "EZVCPKG v0.1 starting up\n\tAuthor: Bradley Austin Davis\n\tWebsite: https://github.com/jherico/ezvcpkg")
+    endif()
+
+
     set(options UPDATE_TOOLCHAIN)
     set(oneValueArgs COMMIT URL REPO BASEDIR OUTPUT CLEAN)
     set(multiValueArgs PACKAGES)
-    cmake_parse_arguments(VCPKG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+    cmake_parse_arguments(EZVCPKG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # Validate arguments
     EZVCPKG_CHECK_ARGS()
@@ -146,6 +166,8 @@ function(EZVCPKG_FETCH)
     # Figure out the paths for everything
     EZVCPKG_CALCULATE_PATHS()
 
+    message(STATUS "EZVCPKG initializing\n\tcommit:     ${EZVCPKG_COMMIT}\n\trepository: ${EZVCPKG_URL}\n\tlocal dir:  ${EZVCPKG_DIR}")
+    
     # We can't assume build systems will be well behaved if we attempt two different concurrent builds of the same 
     # target, so we need to have some locking here to ensure that for a given vcpkg location, only one instance
     # of vcpkg runs at a given time. 
@@ -153,26 +175,26 @@ function(EZVCPKG_FETCH)
     # This is critical because, for instance, when Android Studio does a native code build it will concurrently execute
     # cmake for debug and release versions of the build, in different directories, and therefore concurrently try to 
     # bootstrap and run vcpkg, which will almost certainly corrupt your build directories
-    file(LOCK ${VCPKG_LOCK})
+    file(LOCK ${EZVCPKG_LOCK})
 
     EZVCPKG_BOOTSTRAP()
 
     # Touch the tag file so that this directory is marked as recent, and therefore not cleanable
-    file(TOUCH ${VCPKG_TAG})
+    file(TOUCH ${EZVCPKG_TAG})
 
     # While still holding the global lock, clean up old build directories
-    if (VCPKG_CLEAN)
+    if (EZVCPKG_CLEAN)
         EZVCPKG_CLEAN()
     endif()
 
     # Build packages
     EZVCPKG_BUILD()
 
-    file(LOCK ${VCPKG_LOCK} RELEASE)
-    file(REMOVE ${VCPKG_LOCK})
+    file(LOCK ${EZVCPKG_LOCK} RELEASE)
+    file(REMOVE ${EZVCPKG_LOCK})
 
-    set(EZVCPKG_DIR "${VCPKG_INSTALLED_DIR}" PARENT_SCOPE)
-    if (VCPKG_UPDATE_TOOLCHAIN)
-        set(CMAKE_TOOLCHAIN_FILE ${VCPKG_CMAKE_TOOLCHAIN} PARENT_SCOPE)
+    set(EZVCPKG_DIR "${EZVCPKG_INSTALLED_DIR}" PARENT_SCOPE)
+    if (EZVCPKG_UPDATE_TOOLCHAIN)
+        set(CMAKE_TOOLCHAIN_FILE ${EZVCPKG_CMAKE_TOOLCHAIN} PARENT_SCOPE)
     endif()
 endfunction()
