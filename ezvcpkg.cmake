@@ -188,8 +188,6 @@ function(EZVCPKG_FETCH)
         message(STATUS "EZVCPKG v${EZVCPKG_VERSION} starting up\n\tWebsite: https://github.com/jherico/ezvcpkg")
     endif()
 
-    message(STATUS "TEMP $ENV{TEMP} TEMP $ENV{TMP} HOME $ENV{HOME}")
-
     set(options UPDATE_TOOLCHAIN SERIALIZE USE_HOST_VCPKG)
     set(oneValueArgs COMMIT URL REPO BASEDIR OUTPUT CLEAN)
     set(multiValueArgs PACKAGES)
