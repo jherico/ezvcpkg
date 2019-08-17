@@ -7,6 +7,7 @@
 
 # Arguments: 
 
+# PACKAGES a multi-value argument specifying the packages to install
 # REPO The github repository organization and name, defaults to "microsoft/vcpkg"
 # URL the URL of the git repository.  Defaults to "https://github.com/${REPO}.git"
 # COMMIT The commit ID of the git repository to select when building.  Defaults to "f990dfaa5ba82155f95b75021453c075816fd4be"
@@ -17,7 +18,6 @@
 #   variable.  If that doesn't exist, it will default to ~/.ezvcpkg on OSX, and %TEMP%/ezvcpkg everywhere else
 # CLEAN a single argument parameter that tells the script to clean up out of date EZVCPKG folders.  The value should be the 
 #   number of days after which a folder should be removed if it hasn't been touched. (Not currently implemented)
-# PACKAGES a multi-value argument specifying the packages to install
 #
 # Output:
 # If successful the function will populate EZVCPKG_DIR with the location of the installed triplet, for instance 
@@ -182,7 +182,7 @@ macro(EZVCPKG_CHECK_ARGS)
     endif()
 endmacro()
 
-function(EZVCPKG_FETCH)
+function(EZVCPKG_FETCH_IMPL)
     if (NOT EZVCPKG_ANNOUNCED)
         set(EZVCPKG_ANNOUNCED 1 PARENT_SCOPE)
         message(STATUS "EZVCPKG v${EZVCPKG_VERSION} starting up\n\tWebsite: https://github.com/jherico/ezvcpkg")
@@ -226,9 +226,18 @@ function(EZVCPKG_FETCH)
     file(LOCK ${EZVCPKG_LOCK} RELEASE)
     file(REMOVE ${EZVCPKG_LOCK})
 
+    
     set(EZVCPKG_DIR "${EZVCPKG_INSTALLED_DIR}" PARENT_SCOPE)
     if (EZVCPKG_UPDATE_TOOLCHAIN)
         set(CMAKE_TOOLCHAIN_FILE ${EZVCPKG_CMAKE_TOOLCHAIN} PARENT_SCOPE)
     endif()
     message(STATUS "EZVCPKG done")
 endfunction()
+
+macro(EZVCPKG_FETCH)
+    EZVCPKG_FETCH_IMPL(${ARGN})
+    if (EZVCPKG_QUIT)
+        message(STATUS "EZVCPKG quitting")
+        return()
+    endif()
+endmacro()
