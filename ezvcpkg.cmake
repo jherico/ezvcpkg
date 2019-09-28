@@ -144,10 +144,11 @@ macro(EZVCPKG_BUILD)
             WORKING_DIRECTORY ${EZVCPKG_DIR}
             OUTPUT_QUIET
         )
-endif()
+    endif()
 
     file(TO_CMAKE_PATH ${EZVCPKG_DIR}/buildtrees EZVCPKG_BUILDTREES)
-    if (EXISTS ${EZVCPKG_BUILDTREES})
+    if ((EXISTS ${EZVCPKG_BUILDTREES}) AND  (NOT EZVCPKG_SAVE_BUILD))
+        message("wiping build trees")
         file(REMOVE_RECURSE "${EZVCPKG_DIR}/buildtrees")
     endif()
 endmacro()
@@ -188,7 +189,7 @@ function(EZVCPKG_FETCH_IMPL)
         message(STATUS "EZVCPKG v${EZVCPKG_VERSION} starting up\n\tWebsite: https://github.com/jherico/ezvcpkg")
     endif()
 
-    set(options UPDATE_TOOLCHAIN SERIALIZE USE_HOST_VCPKG)
+    set(options UPDATE_TOOLCHAIN SERIALIZE USE_HOST_VCPKG SAVE_BUILD)
     set(oneValueArgs COMMIT URL REPO BASEDIR OUTPUT CLEAN)
     set(multiValueArgs PACKAGES)
     cmake_parse_arguments(EZVCPKG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
