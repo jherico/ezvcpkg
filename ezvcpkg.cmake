@@ -134,7 +134,9 @@ macro(EZVCPKG_BUILD)
             execute_process(
                 COMMAND ${EZVCPKG_EXE} --vcpkg-root ${EZVCPKG_DIR} install --triplet ${EZVCPKG_TRIPLET} ${_PACKAGE}
                 WORKING_DIRECTORY ${EZVCPKG_DIR}
-                OUTPUT_QUIET
+                RESULT_VARIABLE EZVCPKG_RESULT
+                ERROR_VARIABLE EZVCPKG_ERROR 
+                OUTPUT_VARIABLE EZVCPKG_OUTPUT
             )
         endforeach()
     else()
@@ -142,8 +144,13 @@ macro(EZVCPKG_BUILD)
         execute_process(
             COMMAND ${EZVCPKG_EXE} --vcpkg-root ${EZVCPKG_DIR} install --triplet ${EZVCPKG_TRIPLET} ${EZVCPKG_PACKAGES}
             WORKING_DIRECTORY ${EZVCPKG_DIR}
-            OUTPUT_QUIET
+            RESULT_VARIABLE EZVCPKG_RESULT
+            ERROR_VARIABLE EZVCPKG_ERROR 
+            OUTPUT_VARIABLE EZVCPKG_OUTPUT
         )
+    endif()
+    if (${EZVCPKG_RESULT})
+        message(FATAL_ERROR "EZVCPKG vcpkg execute returned failure ${EZVCPKG_ERROR} ${EZVCPKG_OUTPUT}")
     endif()
 
     file(TO_CMAKE_PATH ${EZVCPKG_DIR}/buildtrees EZVCPKG_BUILDTREES)
