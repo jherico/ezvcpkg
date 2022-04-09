@@ -107,7 +107,7 @@ macro(EZVCPKG_BOOTSTRAP)
         # present and the user will have the default checkout, rather than their requested commit
         message(STATUS "EZVCPKG Checking out commit ${EZVCPKG_COMMIT}")
         execute_process(
-            COMMAND ${GIT_EXECUTABLE} "checkout" ${EZVCPKG_COMMIT}
+            COMMAND ${GIT_EXECUTABLE} "-c" "advice.detachedHead=false" "checkout" ${EZVCPKG_COMMIT}
             WORKING_DIRECTORY ${EZVCPKG_DIR}
             OUTPUT_QUIET)
     endif()
