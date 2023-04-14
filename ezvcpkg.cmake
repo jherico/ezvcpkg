@@ -168,7 +168,7 @@ endmacro()
 macro(EZVCPKG_CHECK_ARGS)
     # Default to a recent vcpkg commit
     if (NOT EZVCPKG_COMMIT)
-        set(EZVCPKG_COMMIT "f990dfaa5ba82155f95b75021453c075816fd4be")
+        set(EZVCPKG_COMMIT "a7b6122f6b6504d16d96117336a0562693579933")
     endif()
 
     if (EZVCPKG_REPO AND EZVCPKG_URL)
